@@ -548,6 +548,8 @@ public class ScoringSubsystem extends BitBucketSubsystem {
 		switch(beakPosition)
 		{
 			case HATCH_GRAPPLE_BEAK:
+				/// TODO: THis pulses between current limit and commanded position
+				/// fix in a bit
 				if(beakMotor.getOutputCurrent() >= ScoringConstants.BEAK_MAX_CURRENT_AMPS) {
 					beakMotor.set(ControlMode.MotionMagic, beakMotor.getSelectedSensorPosition()); // Tell the beak motor to holod it's current position if the current output exceeds BEAK_MAX_CURRENT_AMPS.
 				} else {
