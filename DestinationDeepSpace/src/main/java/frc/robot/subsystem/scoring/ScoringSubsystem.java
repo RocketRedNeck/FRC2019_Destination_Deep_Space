@@ -41,6 +41,7 @@ public class ScoringSubsystem extends BitBucketSubsystem {
 
 
 	private BeakPosition beakPosition = BeakPosition.HATCH_RELEASE_BEAK;
+	private double beakPosition_ticks = beakPosition.getBeak_ticks(); // More useful state
 
 
 	private Idle initialCommand;
@@ -536,34 +537,34 @@ public class ScoringSubsystem extends BitBucketSubsystem {
 
 		boolean grapple = oi.beakGrapple();
 		boolean release = oi.beakRelease();
-		if (grapple)
+		if (grapple ^ release) // Button exclusive
 		{
-			beakPosition = BeakPosition.HATCH_GRAPPLE_BEAK;
+			// Keep formalism of enum and separation of ticks for now
+			if (grapple)
+			{
+				beakPosition = BeakPosition.HATCH_GRAPPLE_BEAK;
+				beakPosition_ticks = beakPosition.getBeak_ticks();
+			}
+			else if (release)
+			{
+				beakPosition = BeakPosition.HATCH_RELEASE_BEAK;
+				beakPosition_ticks = beakPosition.getBeak_ticks();
+			}
+			// else just use the last commanded position (which could be a hold current position
+
 		}
-		else if (release)
+		// else just use the last commanded position (which could be a hold current position)
+		// NOTE: Don't read the position and hold here, yet, otherwise grappler won't move
+
+		// Regardless of decisions, above, upon current high just set the position to hold as is
+		// i.e., Stop where you are if there is resistance
+		if(beakMotor.getOutputCurrent() >= ScoringConstants.BEAK_MAX_CURRENT_AMPS) 
 		{
-			beakPosition = BeakPosition.HATCH_RELEASE_BEAK;
+			beakPosition_ticks = beakMotor.getSelectedSensorPosition();
 		}
 
-		switch(beakPosition)
-		{
-			case HATCH_GRAPPLE_BEAK:
-				/// TODO: THis pulses between current limit and commanded position
-				/// fix in a bit
-				if(beakMotor.getOutputCurrent() >= ScoringConstants.BEAK_MAX_CURRENT_AMPS) {
-					beakMotor.set(ControlMode.MotionMagic, beakMotor.getSelectedSensorPosition()); // Tell the beak motor to holod it's current position if the current output exceeds BEAK_MAX_CURRENT_AMPS.
-				} else {
-					beakMotor.set(ControlMode.MotionMagic, beakPosition.getBeak_ticks()); // Tell the beak to go to the position set in the enum.
-				}
-				break;
-
-			case HATCH_RELEASE_BEAK:
-				beakMotor.set(ControlMode.MotionMagic, beakPosition.getBeak_ticks()); // Tell the beak to go to the position set in the enum.
-				break;
-
-			default:
-				break;
-		}
+		// Command the chosen position (either based on last button press or hold)
+		beakMotor.set(ControlMode.MotionMagic, beakPosition_ticks);
 		
 		clearDiagnosticsEnabled();
 		updateBaseDashboard();
